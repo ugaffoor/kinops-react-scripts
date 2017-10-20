@@ -40,6 +40,19 @@ const getPublicUrl = appPackageJson =>
 // We can't use a relative path in HTML because we don't want to load something
 // like /todos/42/static/js/bundle.7289d.js. We have to know the root.
 function getServedPath(appPackageJson) {
+  // Customization for kinops.io, we do not support setting the public path at
+  // compile time because it needs to be set dynamically at runtime (see the
+  // config/productionIndexWrapper.js file).
+  if (envPublicUrl || require(appPackageJson).homepage) {
+    console.error(
+      `When using kinops-react-scripts you cannot set the public
+      path using the PUBLIC_URL environment variable or the homepage
+      package.json property. This is because it actually needs to be set
+      dynamically at runtime depending on how and where the React bundle is
+      deployed on kinops.io.`.replace(/\n\s*/g, ' ')
+    );
+    process.exit();
+  }
   const publicUrl = getPublicUrl(appPackageJson);
   const servedUrl =
     envPublicUrl || (publicUrl ? url.parse(publicUrl).pathname : '/');
@@ -58,6 +71,7 @@ module.exports = {
   yarnLockFile: resolveApp('yarn.lock'),
   testsSetup: resolveApp('src/setupTests.js'),
   appNodeModules: resolveApp('node_modules'),
+  appConfig: resolveApp('config.js'),
   publicUrl: getPublicUrl(resolveApp('package.json')),
   servedPath: getServedPath(resolveApp('package.json')),
 };
@@ -78,6 +92,7 @@ module.exports = {
   yarnLockFile: resolveApp('yarn.lock'),
   testsSetup: resolveApp('src/setupTests.js'),
   appNodeModules: resolveApp('node_modules'),
+  appConfig: resolveApp('config.js'),
   publicUrl: getPublicUrl(resolveApp('package.json')),
   servedPath: getServedPath(resolveApp('package.json')),
   // These properties only exist before ejecting:
@@ -108,6 +123,7 @@ if (
     yarnLockFile: resolveOwn('template/yarn.lock'),
     testsSetup: resolveOwn('template/src/setupTests.js'),
     appNodeModules: resolveOwn('node_modules'),
+    appConfig: resolveOwn('template/config.js'),
     publicUrl: getPublicUrl(resolveOwn('package.json')),
     servedPath: getServedPath(resolveOwn('package.json')),
     // These properties only exist before ejecting:
