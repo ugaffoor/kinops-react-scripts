@@ -70,7 +70,7 @@ module.exports = {
     // Add /* filename */ comments to generated require()s in the output.
     pathinfo: true,
     // Customizations for kinops.io, to be more consistent with our initial
-    // webpack configuration we take /static/ out of the output file names
+    // webpack configuration we take static/ out of the output file names
     // because that is now our public path. We also output the files directly
     // into the static directory instead of a js/ directory.
     // This does not produce a real file. It's just the virtual path that is

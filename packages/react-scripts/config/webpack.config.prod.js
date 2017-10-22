@@ -23,7 +23,13 @@ const getClientEnvironment = require('./env');
 
 // Webpack uses `publicPath` to determine where the app is being served from.
 // It requires a trailing slash, or the file assets will get an incorrect path.
-const publicPath = paths.servedPath;
+// const publicPath = paths.servedPath;
+// Customization for kinops.io, to be more consistent with our initial webpack
+// configuration we hardcode the public path to /static/. Note that normally the
+// the public path for the production build can be configured and that is
+// resolved in the paths.js script. But we do not support configuring the public
+// path at compile time because it actually needs to be set at runtime.
+const publicPath = '/static/';
 // Some apps do not use client-side routing with pushState.
 // For these, "homepage" can be set to "." to enable relative asset paths.
 const shouldUseRelativeAssetPaths = publicPath === './';
@@ -63,16 +69,30 @@ module.exports = {
   // We generate sourcemaps in production. This is slow but gives good results.
   // You can exclude the *.map files from the build during deployment.
   devtool: shouldUseSourceMap ? 'source-map' : false,
+  // Customizations for kinops.io, we load the full babel-polyfill by default
+  // and for production we add setPublicPath.js which is the code that sets the
+  // public path at runtime before any of our app code starts to import things.
   // In production, we only want to load the polyfills and the app code.
-  entry: [require.resolve('./polyfills'), paths.appIndexJs],
+  entry: [
+    require.resolve('./polyfills'),
+    require.resolve('babel-polyfill'),
+    require.resolve('./setPublicPath'),
+    paths.appIndexJs,
+  ],
   output: {
     // The build folder.
     path: paths.appBuild,
+    // Customizations for kinops.io, to be more consistent with our initial
+    // webpack configuration we take static/ out of the output file names
+    // because that is now our public path. We also output the files directly
+    // into the static directory instead of a js/ directory. Normally the output
+    // file names also contain a hash for cache-busting but this would not be
+    // compatible so we take the hash out of the generated names.
     // Generated JS file names (with nested folders).
     // There will be one main bundle, and one file per asynchronous chunk.
     // We don't currently advertise code splitting but Webpack supports it.
-    filename: 'static/js/[name].[chunkhash:8].js',
-    chunkFilename: 'static/js/[name].[chunkhash:8].chunk.js',
+    filename: 'bundle.js',
+    chunkFilename: '[name].chunk.js',
     // We inferred the "public path" (such as / or /my-project) from homepage.
     publicPath: publicPath,
     // Point sourcemap entries to original disk location (format as URL on Windows)
@@ -157,6 +177,8 @@ module.exports = {
         // match the requirements. When no loader matches it will fall
         // back to the "file" loader at the end of the loader list.
         oneOf: [
+          // Customization for kinops.io, take static/ out of output file name
+          // because it is now in the public path.
           // "url" loader works just like "file" loader but it also embeds
           // assets smaller than specified size as data URLs to avoid requests.
           {
@@ -164,7 +186,7 @@ module.exports = {
             loader: require.resolve('url-loader'),
             options: {
               limit: 10000,
-              name: 'static/media/[name].[hash:8].[ext]',
+              name: 'media/[name].[hash:8].[ext]',
             },
           },
           // Process JS with Babel.
@@ -180,65 +202,44 @@ module.exports = {
               compact: true,
             },
           },
-          // The notation here is somewhat confusing.
-          // "postcss" loader applies autoprefixer to our CSS.
-          // "css" loader resolves paths in CSS and adds assets as dependencies.
-          // "style" loader normally turns CSS into JS modules injecting <style>,
-          // but unlike in development configuration, we do something different.
-          // `ExtractTextPlugin` first applies the "postcss" and "css" loaders
-          // (second argument), then grabs the result CSS and puts it into a
-          // separate file in our build process. This way we actually ship
-          // a single CSS file in production instead of JS code injecting <style>
-          // tags. If you use code splitting, however, any async bundles will still
-          // use the "style" loader inside the async code so CSS from them won't be
-          // in the main CSS file.
           {
             test: /\.css$/,
-            loader: ExtractTextPlugin.extract(
-              Object.assign(
-                {
-                  fallback: {
-                    loader: require.resolve('style-loader'),
-                    options: {
-                      hmr: false,
-                    },
-                  },
-                  use: [
-                    {
-                      loader: require.resolve('css-loader'),
-                      options: {
-                        importLoaders: 1,
-                        minimize: true,
-                        sourceMap: shouldUseSourceMap,
-                      },
-                    },
-                    {
-                      loader: require.resolve('postcss-loader'),
-                      options: {
-                        // Necessary for external CSS imports to work
-                        // https://github.com/facebookincubator/create-react-app/issues/2677
-                        ident: 'postcss',
-                        plugins: () => [
-                          require('postcss-flexbugs-fixes'),
-                          autoprefixer({
-                            browsers: [
-                              '>1%',
-                              'last 4 versions',
-                              'Firefox ESR',
-                              'not ie < 9', // React doesn't support IE8 anyway
-                            ],
-                            flexbox: 'no-2009',
-                          }),
-                        ],
-                      },
-                    },
-                  ],
+            use: [
+              require.resolve('style-loader'),
+              {
+                loader: require.resolve('css-loader'),
+                options: {
+                  minimize: true,
+                  sourceMap: shouldUseSourceMap,
                 },
-                extractTextPluginOptions
-              )
-            ),
-            // Note: this won't work without `new ExtractTextPlugin()` in `plugins`.
+              },
+            ],
           },
+          {
+            test: /\.scss$/,
+            use: [
+              require.resolve('style-loader'),
+              {
+                loader: require.resolve('css-loader'),
+                options: {
+                  minimize: true,
+                  sourceMap: shouldUseSourceMap,
+                },
+              },
+              {
+                loader: require.resolve('sass-loader'),
+                options: {
+                  sourceMap: shouldUseSourceMap,
+                },
+              },
+            ],
+          },
+          {
+            test: /\.svg$/,
+            loader: require.resolve('raw-loader'),
+          },
+          // Customization for kinops.io, take static/ out of output file name
+          // because it is now in the public path.
           // "file" loader makes sure assets end up in the `build` folder.
           // When you `import` an asset, you get its filename.
           // This loader doesn't use a "test" so it will catch all modules
@@ -251,7 +252,7 @@ module.exports = {
             // by webpacks internal loaders.
             exclude: [/\.js$/, /\.html$/, /\.json$/],
             options: {
-              name: 'static/media/[name].[hash:8].[ext]',
+              name: 'media/[name].[hash:8].[ext]',
             },
           },
           // ** STOP ** Are you adding a new loader?
@@ -261,29 +262,31 @@ module.exports = {
     ],
   },
   plugins: [
+    // Customizations for kinops.io, we do not need the HTML related plugins
+    // below because our setup does not use an index.html.
     // Makes some environment variables available in index.html.
     // The public URL is available as %PUBLIC_URL% in index.html, e.g.:
     // <link rel="shortcut icon" href="%PUBLIC_URL%/favicon.ico">
     // In production, it will be an empty string unless you specify "homepage"
     // in `package.json`, in which case it will be the pathname of that URL.
-    new InterpolateHtmlPlugin(env.raw),
+    // new InterpolateHtmlPlugin(env.raw),
     // Generates an `index.html` file with the <script> injected.
-    new HtmlWebpackPlugin({
-      inject: true,
-      template: paths.appHtml,
-      minify: {
-        removeComments: true,
-        collapseWhitespace: true,
-        removeRedundantAttributes: true,
-        useShortDoctype: true,
-        removeEmptyAttributes: true,
-        removeStyleLinkTypeAttributes: true,
-        keepClosingSlash: true,
-        minifyJS: true,
-        minifyCSS: true,
-        minifyURLs: true,
-      },
-    }),
+    // new HtmlWebpackPlugin({
+    //   inject: true,
+    //   template: paths.appHtml,
+    //   minify: {
+    //     removeComments: true,
+    //     collapseWhitespace: true,
+    //     removeRedundantAttributes: true,
+    //     useShortDoctype: true,
+    //     removeEmptyAttributes: true,
+    //     removeStyleLinkTypeAttributes: true,
+    //     keepClosingSlash: true,
+    //     minifyJS: true,
+    //     minifyCSS: true,
+    //     minifyURLs: true,
+    //   },
+    // }),
     // Makes some environment variables available to the JS code, for example:
     // if (process.env.NODE_ENV === 'production') { ... }. See `./env.js`.
     // It is absolutely essential that NODE_ENV was set to production here.
@@ -307,46 +310,51 @@ module.exports = {
       },
       sourceMap: shouldUseSourceMap,
     }),
+    // Customizations for kinops.io, because of the dynamic nature of our public
+    // path at runtime, urls used in css files when extract text plugin is used
+    // do not work so we leave the styles bundled into the output js file.
     // Note: this won't work without ExtractTextPlugin.extract(..) in `loaders`.
-    new ExtractTextPlugin({
-      filename: cssFilename,
-    }),
+    // new ExtractTextPlugin({
+    //   filename: cssFilename,
+    // }),
+    // Customizations for kinops.io, we do not need the manifest or service
+    // worker plugins below.
     // Generate a manifest file which contains a mapping of all asset filenames
     // to their corresponding output file so that tools can pick it up without
     // having to parse `index.html`.
-    new ManifestPlugin({
-      fileName: 'asset-manifest.json',
-    }),
+    // new ManifestPlugin({
+    //   fileName: 'asset-manifest.json',
+    // }),
     // Generate a service worker script that will precache, and keep up to date,
     // the HTML & assets that are part of the Webpack build.
-    new SWPrecacheWebpackPlugin({
-      // By default, a cache-busting query parameter is appended to requests
-      // used to populate the caches, to ensure the responses are fresh.
-      // If a URL is already hashed by Webpack, then there is no concern
-      // about it being stale, and the cache-busting can be skipped.
-      dontCacheBustUrlsMatching: /\.\w{8}\./,
-      filename: 'service-worker.js',
-      logger(message) {
-        if (message.indexOf('Total precache size is') === 0) {
-          // This message occurs for every build and is a bit too noisy.
-          return;
-        }
-        if (message.indexOf('Skipping static resource') === 0) {
-          // This message obscures real errors so we ignore it.
-          // https://github.com/facebookincubator/create-react-app/issues/2612
-          return;
-        }
-        console.log(message);
-      },
-      minify: true,
-      // For unknown URLs, fallback to the index page
-      navigateFallback: publicUrl + '/index.html',
-      // Ignores URLs starting from /__ (useful for Firebase):
-      // https://github.com/facebookincubator/create-react-app/issues/2237#issuecomment-302693219
-      navigateFallbackWhitelist: [/^(?!\/__).*/],
-      // Don't precache sourcemaps (they're large) and build asset manifest:
-      staticFileGlobsIgnorePatterns: [/\.map$/, /asset-manifest\.json$/],
-    }),
+    // new SWPrecacheWebpackPlugin({
+    //   // By default, a cache-busting query parameter is appended to requests
+    //   // used to populate the caches, to ensure the responses are fresh.
+    //   // If a URL is already hashed by Webpack, then there is no concern
+    //   // about it being stale, and the cache-busting can be skipped.
+    //   dontCacheBustUrlsMatching: /\.\w{8}\./,
+    //   filename: 'service-worker.js',
+    //   logger(message) {
+    //     if (message.indexOf('Total precache size is') === 0) {
+    //       // This message occurs for every build and is a bit too noisy.
+    //       return;
+    //     }
+    //     if (message.indexOf('Skipping static resource') === 0) {
+    //       // This message obscures real errors so we ignore it.
+    //       // https://github.com/facebookincubator/create-react-app/issues/2612
+    //       return;
+    //     }
+    //     console.log(message);
+    //   },
+    //   minify: true,
+    //   // For unknown URLs, fallback to the index page
+    //   navigateFallback: publicUrl + '/index.html',
+    //   // Ignores URLs starting from /__ (useful for Firebase):
+    //   // https://github.com/facebookincubator/create-react-app/issues/2237#issuecomment-302693219
+    //   navigateFallbackWhitelist: [/^(?!\/__).*/],
+    //   // Don't precache sourcemaps (they're large) and build asset manifest:
+    //   staticFileGlobsIgnorePatterns: [/\.map$/, /asset-manifest\.json$/],
+    // }),
     // Moment.js is an extremely popular library that bundles large locale files
     // by default due to how Webpack interprets its code. This is a practical
     // solution that requires the user to opt into importing specific locales.
