@@ -35,6 +35,7 @@ const {
   prepareUrls,
 } = require('react-dev-utils/WebpackDevServerUtils');
 const openBrowser = require('react-dev-utils/openBrowser');
+const configureKinopsProxy = require('react-dev-utils/configureKinopsProxy');
 const paths = require('../config/paths');
 const config = require('../config/webpack.config.dev');
 const createDevServerConfig = require('../config/webpackDevServer.config');
@@ -54,9 +55,14 @@ const HOST = process.env.HOST || '0.0.0.0';
 // We attempt to use the default port but if it is busy, we offer the user to
 // run on a different port. `detect()` Promise resolves to the next free port.
 choosePort(HOST, DEFAULT_PORT)
-  .then(port => {
-    if (port == null) {
-      // We have not found a port.
+  // Customizations for kinops.io, we add an extra step at start up that checks
+  // for the config.json file and if its not present it prompts the user for
+  // configuration values and then creates the file.
+  .then(configureKinopsProxy(paths.appConfig))
+  .then(kinopsConfig => {
+    const port = kinopsConfig ? kinopsConfig.port : null;
+    if (!kinopsConfig || !port) {
+      // We have not found a port or the kionps configuration was not completed.
       return;
     }
     const protocol = process.env.HTTPS === 'true' ? 'https' : 'http';
@@ -83,12 +89,11 @@ choosePort(HOST, DEFAULT_PORT)
     }
     // Hardcode the proxy settings (with a couple of configurable properties
     // that can be defined in the config.js file).
-    const appConfig = require(paths.appConfig);
     const kinopsProxySetting = {
       '/': {
-        target: appConfig.kineticWebserver,
+        target: kinopsConfig.kineticWebserver,
         headers: {
-          'X-Webpack-Bundle-Name': appConfig.bundleName,
+          'X-Webpack-Bundle-Name': kinopsConfig.bundleName,
         },
         secure: false,
         autoRewrite: true,
