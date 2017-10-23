@@ -35,7 +35,7 @@ const {
   prepareUrls,
 } = require('react-dev-utils/WebpackDevServerUtils');
 const openBrowser = require('react-dev-utils/openBrowser');
-const configureKinopsProxy = require('react-dev-utils/configureKinopsProxy');
+const configureKinopsProxy = require('./utils/configureKinopsProxy');
 const paths = require('../config/paths');
 const config = require('../config/webpack.config.dev');
 const createDevServerConfig = require('../config/webpackDevServer.config');

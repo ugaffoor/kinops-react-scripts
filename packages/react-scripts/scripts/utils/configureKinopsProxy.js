@@ -10,7 +10,7 @@
 const fs = require('fs');
 const chalk = require('chalk');
 const inquirer = require('inquirer');
-const clearConsole = require('./clearConsole');
+const clearConsole = require('react-dev-utils/clearConsole');
 const isInteractive = process.stdout.isTTY;
 
 // Takes the port so that this can easily be chained with the other async
