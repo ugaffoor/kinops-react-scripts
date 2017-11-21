@@ -1,6 +1,6 @@
 {
   "name": "kinops-react-scripts",
-  "version": "0.5.0",
+  "version": "0.6.0",
   "description": "Forked version of react-scripts that melds kinops.io and Create React App.",
   "repository": "https://github.com/skoestler/kinops-react-scripts",
   "license": "MIT",
