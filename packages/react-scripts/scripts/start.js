@@ -90,7 +90,7 @@ choosePort(HOST, DEFAULT_PORT)
     // Hardcode the proxy settings (with a couple of configurable properties
     // that can be defined in the config.js file).
     const kinopsProxySetting = {
-      '^((?!sockjs-node/\\d{3}/\\w{8}/websocket).)*$': {
+      '^((?!/sockjs-node/\\d{3}/\\w{8}/websocket).)*$': {
         target: kinopsConfig.kineticWebserver,
         headers: {
           'X-Webpack-Bundle-Name': kinopsConfig.bundleName,
