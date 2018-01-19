@@ -94,6 +94,7 @@ choosePort(HOST, DEFAULT_PORT)
         target: kinopsConfig.kineticWebserver,
         headers: {
           'X-Webpack-Bundle-Name': kinopsConfig.bundleName,
+          'X-Webpack-Kinetic-Webserver': kinopsConfig.kineticWebserver,
         },
         secure: false,
         autoRewrite: true,
