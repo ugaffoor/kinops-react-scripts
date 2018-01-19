@@ -216,6 +216,7 @@ module.exports = {
           },
           {
             test: /\.svg$/,
+            resourceQuery: /raw/,
             loader: require.resolve('raw-loader'),
           },
           // "file" loader makes sure those assets get served by WebpackDevServer.

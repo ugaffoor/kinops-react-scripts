@@ -236,6 +236,7 @@ module.exports = {
           },
           {
             test: /\.svg$/,
+            resourceQuery: /raw/,
             loader: require.resolve('raw-loader'),
           },
           // Customization for kinops.io, take static/ out of output file name
