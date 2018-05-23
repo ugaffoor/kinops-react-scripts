@@ -115,6 +115,7 @@ choosePort(HOST, DEFAULT_PORT)
         autoRewrite: true,
         protocolRewrite: 'http',
         ws: true,
+        changeOrigin: true,
       },
     };
     const proxyConfig = prepareProxy(kinopsProxySetting, paths.appPublic);
